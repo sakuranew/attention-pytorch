@@ -27,11 +27,15 @@ class BasicAttention(nn.Module):
         :param is_k: let k_embd to be k or not,default not
         :param is_v: let v_embd to be v or not,default not
         '''
+        super(BasicAttention, self).__init__()
+
         if is_q:
             self.q_w=lambda x:x
-            assert q_embd_size==q_k_hidden_size
+            assert q_embd_size==k_embd_size
         else:
             self.q_w=nn.Linear(q_embd_size,q_k_hidden_size)
+        self.is_q=is_q
+        self.q_embd_size=q_embd_size
         if is_k:
             self.k_w=lambda x:x
             assert k_embd_size==q_k_hidden_size
@@ -68,8 +72,12 @@ class BasicAttention(nn.Module):
         assert k_len==v_len
 
         # get q,k,v
-        q=self.q_w(q_embd).view(batch_size,q_len,self.head_size,self.q_k_hidden_size)
-        q=q.permute(2,0,1,3).contiguous().view(-1,q_len,self.q_k_hidden_size)
+        if self.is_q:
+            q=self.q_w(q_embd).view(batch_size,q_len,self.head_size,self.q_embd_size)
+            q=q.permute(2,0,1,3).contiguous().view(-1,q_len,self.q_embd_size)
+        else:
+            q=self.q_w(q_embd).view(batch_size,q_len,self.head_size,self.q_k_hidden_size)
+            q=q.permute(2,0,1,3).contiguous().view(-1,q_len,self.q_k_hidden_size)
         k=self.k_w(k_embd).view(batch_size,k_len,self.head_size,self.q_k_hidden_size)
         k=k.permute(2,0,1,3).contiguous().view(-1,k_len,self.q_k_hidden_size)
         v=self.v_w(v_embd).view(batch_size,v_len,self.head_size,self.v_hidden_size)
@@ -79,18 +87,21 @@ class BasicAttention(nn.Module):
         if isinstance(self.score_func,str):
             if self.score_func=="dot":
                 score=torch.bmm(q,k.permute(0,2,1))
+                score = nn.functional.softmax(score, dim=-1)
+
             elif self.score_func=="scaled_dot":
                 temp=torch.bmm(q,k.permute(0,2,1))
                 score=torch.div(temp,math.sqrt(self.q_k_hidden_size))
+                score = nn.functional.softmax(score, dim=-1)
+
             else:
                 raise RuntimeError('invalid score function')
-        elif isinstance(self.score_func,function):
+        elif callable(self.score_func):
             try:
                 score=self.score_func(q,k)
             except Exception as e:
                 print("Exception :",e)
 
-        score=nn.functional.softmax(score,dim=-1)
 
         # get output
         output=torch.bmm(score,v)
