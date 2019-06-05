@@ -102,7 +102,8 @@ class BasicAttention(nn.Module):
             except Exception as e:
                 print("Exception :",e)
         if mask is not None:
-            score = score.masked_fill(mask, -np.inf)
+            mask=mask.byte().unsqueeze(1)
+            score = score.masked_fill(1-mask, -np.inf)
         score = nn.functional.softmax(score, dim=-1)
 
 
