@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+import numpy as np
 import math
 class BasicAttention(nn.Module):
     def __init__(self,
@@ -9,7 +10,7 @@ class BasicAttention(nn.Module):
                  q_k_hidden_size,
                  v_hidden_size,
                  head_size=1,     # for multi-head attention
-                 score_func='dot',
+                 score_func='scaled_dot',
                  is_q=False,    # let q_embd to be q or not,default not
                  is_k=False,
                  is_v=False,
@@ -50,7 +51,7 @@ class BasicAttention(nn.Module):
         self.v_hidden_size=v_hidden_size
         self.head_size=head_size
         self.score_func=score_func
-    def forward(self, q_embd,k_embd,v_embd):
+    def forward(self, q_embd,k_embd,v_embd,mask=None):
         '''
         batch-first is needed
         :param q_embd: [?,q_len,q_embd_size] or [?,q_embd_size]
@@ -87,12 +88,11 @@ class BasicAttention(nn.Module):
         if isinstance(self.score_func,str):
             if self.score_func=="dot":
                 score=torch.bmm(q,k.permute(0,2,1))
-                score = nn.functional.softmax(score, dim=-1)
+
 
             elif self.score_func=="scaled_dot":
                 temp=torch.bmm(q,k.permute(0,2,1))
                 score=torch.div(temp,math.sqrt(self.q_k_hidden_size))
-                score = nn.functional.softmax(score, dim=-1)
 
             else:
                 raise RuntimeError('invalid score function')
@@ -101,6 +101,9 @@ class BasicAttention(nn.Module):
                 score=self.score_func(q,k)
             except Exception as e:
                 print("Exception :",e)
+        if mask is not None:
+            score = score.masked_fill(mask, -np.inf)
+        score = nn.functional.softmax(score, dim=-1)
 
 
         # get output
