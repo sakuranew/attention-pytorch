@@ -9,6 +9,7 @@ def orignal(x):
     return x
 
 
+
 class BasicAttention(nn.Module):
     def __init__(self,
                  q_embd_size,
@@ -22,6 +23,7 @@ class BasicAttention(nn.Module):
                  is_q=False,  # let q_embd to be q or not,default not
                  is_k=False,
                  is_v=False,
+                 bias=True
                  ):
         '''
 
@@ -35,6 +37,7 @@ class BasicAttention(nn.Module):
         :param is_q: let q_embd to be q or not,default not
         :param is_k: let k_embd to be k or not,default not
         :param is_v: let v_embd to be v or not,default not
+        :param bias: bias of linear
         '''
         super(BasicAttention, self).__init__()
         if not q_k_hidden_size:
@@ -49,19 +52,19 @@ class BasicAttention(nn.Module):
             self.q_w = orignal
             assert q_embd_size == k_embd_size
         else:
-            self.q_w = nn.Linear(q_embd_size, q_k_hidden_size)
+            self.q_w = nn.Linear(q_embd_size, q_k_hidden_size,bias=bias)
         self.is_q = is_q
         self.q_embd_size = q_embd_size
         if is_k:
             self.k_w = orignal
             assert k_embd_size == q_k_hidden_size
         else:
-            self.k_w = nn.Linear(k_embd_size, q_k_hidden_size)
+            self.k_w = nn.Linear(k_embd_size, q_k_hidden_size,bias=bias)
         if is_v:
             self.v_w = orignal
             assert v_embd_size == output_hidden_size
         else:
-            self.v_w = nn.Linear(v_embd_size, output_hidden_size)
+            self.v_w = nn.Linear(v_embd_size, output_hidden_size,bias=bias)
         self.q_k_hidden_size = q_k_hidden_size
         self.output_hidden_size = output_hidden_size
         self.num_heads = num_heads
@@ -106,7 +109,6 @@ class BasicAttention(nn.Module):
             if self.score_func == "dot":
                 score = torch.bmm(q, k.permute(0, 2, 1))
 
-
             elif self.score_func == "scaled_dot":
                 temp = torch.bmm(q, k.permute(0, 2, 1))
                 score = torch.div(temp, math.sqrt(self.q_k_hidden_size))
@@ -119,9 +121,8 @@ class BasicAttention(nn.Module):
             except Exception as e:
                 print("Exception :", e)
         if mask is not None:
-            mask = mask.byte().unsqueeze(1)
-
-            score = score.masked_fill(1 - mask, -np.inf)
+            mask = mask.bool().unsqueeze(1)
+            score = score.masked_fill(~mask, -np.inf)
         score = nn.functional.softmax(score, dim=-1)
         score = nn.functional.dropout(score, p=self.drop_rate, training=self.training)
 
