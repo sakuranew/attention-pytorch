@@ -1,0 +1,28 @@
+class AttentionPooling(BasicAttention):
+    '''
+    输入是lstm的output，不用到q，其中k，v都是output
+    来自论文Attention-Based Bidirectional Long Short-Term Memory Networks for Relation Classification
+    '''
+
+    def __init__(self, embd_size, q_k_hidden_size=1, num_heads=1, **kwargs):
+        q_embd_size = embd_size
+        k_embd_size = embd_size
+        v_embd_size = embd_size
+        output_hidden_size = embd_size
+        is_q = True
+        # is_v=True
+        score_func = self.score
+        super(AttentionPooling, self).__init__(q_embd_size, k_embd_size, v_embd_size, q_k_hidden_size,
+                                               output_hidden_size, num_heads, score_func, is_q, **kwargs)
+
+    def score(self, q, k):
+        score = k.permute(0, 2, 1)
+        # score = nn.functional.softmax(score, dim=-1)
+        return score
+
+    def forward(self, embd, mask=None):
+        q_embd = embd
+        k_embd = embd
+        v_embd = embd
+        return super(AttentionPooling, self).forward(q_embd, k_embd, v_embd, mask)
+
