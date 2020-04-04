@@ -8,7 +8,7 @@ class SelfAttention(BasicAttention):
         q_embd_size = embd_size
         k_embd_size = embd_size
         v_embd_size = embd_size
-        super().__init__(q_embd_size, k_embd_size, v_embd_size, num_heads, **kwargs)
+        super().__init__(q_embd_size, k_embd_size, v_embd_size, num_heads=num_heads, **kwargs)
 
     def forward(self, embd, mask=None):
         q_embd = embd
