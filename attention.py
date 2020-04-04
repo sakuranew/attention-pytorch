@@ -93,12 +93,12 @@ class BasicAttention(nn.Module):
         assert k_len == v_len
 
         # get q,k,v
-        if self.is_q:
-            q = self.q_w(q_embd).view(batch_size, q_len, self.num_heads, self.q_embd_size // self.num_heads)
-            q = q.permute(2, 0, 1, 3).contiguous().view(-1, q_len, self.q_embd_size // self.num_heads)
-        else:
-            q = self.q_w(q_embd).view(batch_size, q_len, self.num_heads, self.head_dim)
-            q = q.permute(2, 0, 1, 3).contiguous().view(-1, q_len, self.head_dim)
+#         if self.is_q:
+#             q = self.q_w(q_embd).view(batch_size, q_len, self.num_heads, self.q_embd_size // self.num_heads)
+#             q = q.permute(2, 0, 1, 3).contiguous().view(-1, q_len, self.q_embd_size // self.num_heads)
+#         else:
+        q = self.q_w(q_embd).view(batch_size, q_len, self.num_heads, self.head_dim)
+        q = q.permute(2, 0, 1, 3).contiguous().view(-1, q_len, self.head_dim)
         k = self.k_w(k_embd).view(batch_size, k_len, self.num_heads, self.head_dim)
         k = k.permute(2, 0, 1, 3).contiguous().view(-1, k_len, self.head_dim)
         v = self.v_w(v_embd).view(batch_size, v_len, self.num_heads, self.output_hidden_size // self.num_heads)
